@@ -17,7 +17,7 @@ import networkx as nx
 
 from features   import build_global_scores, compute_graph_features
 from embeddings import build_svd_embeddings, compute_svd_features
-from sampling   import sample_random_negatives, sample_hard_negatives, sample_mixed_negatives
+from sampling   import sample_random_negatives, sample_mixed_negatives
 from models     import (make_lgbm, make_hgb, make_rf, cv_auc,
                          ensemble_oof_auc, train_and_predict_ensemble)
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
