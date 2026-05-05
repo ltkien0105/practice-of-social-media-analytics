@@ -147,10 +147,104 @@ def main():
              "(Spearman ρ = 0.7226 between their predictions), indicating that combining "
              "them captures orthogonal signal not present in either model alone.")
 
-    # ── 2. Algorithm Details ────────────────────────────────────────────────
-    doc.add_heading("2. Algorithm Details", level=1)
+    # ── 2. Method and Algorithm Design ──────────────────────────────────────
+    doc.add_heading("2. Method and Algorithm Design", level=1)
 
-    doc.add_heading("2.1 Model A — Hand-Crafted Graph Features", level=2)
+    doc.add_heading("2.1 Algorithm Structure and Preprocessing Rationale", level=2)
+    add_para(doc,
+             "The link-prediction task is reformulated as a supervised binary "
+             "classification problem. The pipeline proceeds in three stages: "
+             "(i) build a graph from the training edges, (ii) extract features per "
+             "candidate (u, v) pair, and (iii) train a classifier on observed edges "
+             "plus synthetic negatives. Two such pipelines are run in parallel "
+             "(Models A and B, Sections 2.2 and 2.3), and their predictions are "
+             "combined in a final blending step (Section 2.4).")
+    add_para(doc,
+             "Every preprocessing step is listed below together with the reason for "
+             "performing it.")
+    add_table(doc,
+              headers=["Preprocessing step", "Description and rationale"],
+              rows=[
+                  ["1. Graph construction",
+                   "Train edges (Node1, Node2) are loaded into a NetworkX DiGraph; "
+                   "the undirected projection is also built. "
+                   "Reason: most local similarity metrics (Jaccard, Adamic–Adar) "
+                   "are conventionally defined on undirected graphs, while "
+                   "reciprocity and direction-aware metrics need the directed view."],
+                  ["2. Adjacency caching (Model A only)",
+                   "Successor sets, predecessor sets, and in/out degrees are cached "
+                   "as Python dicts before feature extraction begins. "
+                   "Reason: NetworkX's per-call successors() is O(degree). With "
+                   "~370 K (u, v) pairs and many neighbour lookups per pair, "
+                   "caching reduces each lookup to O(1) and brings feature "
+                   "extraction from minutes to seconds. Model B does not perform "
+                   "this caching — it calls G.successors() and G.predecessors() "
+                   "inline per pair, which is partly why its feature extraction "
+                   "is slower despite having a similar feature set."],
+                  ["3. Negative sampling",
+                   "Random non-existent edges are sampled in equal count to the "
+                   "positive edges, producing balanced training data. "
+                   "Reason: link prediction has only positive labels; a "
+                   "discriminative classifier needs negatives. Random sampling is "
+                   "the standard baseline. Limitation: random negatives are easy "
+                   "to separate from positives, which inflates CV AUC; harder "
+                   "alternatives are discussed in Section 5.1."],
+                  ["4. Pair-wise feature engineering",
+                   "Each (u, v) pair is mapped to a fixed-length numeric vector "
+                   "(19 dimensions for Model A, ~290 for Model B). "
+                   "Reason: gradient-boosted trees require tabular inputs. The "
+                   "chosen features (common neighbours, Adamic–Adar, preferential "
+                   "attachment, etc.) have a long track record on social-network "
+                   "link-prediction benchmarks."],
+                  ["5. SVD on the adjacency matrix (Model B only)",
+                   "The directed adjacency A is factorised by truncated SVD into "
+                   "256-dim source and destination embeddings per node. "
+                   "Reason: hand-crafted features capture local topology but miss "
+                   "latent role/community structure. SVD is a cheap, deterministic "
+                   "embedding that complements local features. The Hadamard "
+                   "product of source and destination embeddings is a standard "
+                   "pair-wise representation for link prediction."],
+                  ["6. Pre-computed global node scores (Model B only)",
+                   "PageRank, HITS hub/authority, and Louvain communities are "
+                   "computed once and cached per node. "
+                   "Reason: these scores express global importance and group "
+                   "membership — information orthogonal to local neighbourhood "
+                   "features — and are too expensive to recompute per (u, v) pair."],
+                  ["7. LightGBM classifier",
+                   "Gradient-boosted decision trees are used for both models. "
+                   "Reason: LightGBM handles features with very different scales "
+                   "(degrees in 1–1000 vs. similarities in [0, 1]) without "
+                   "normalisation, captures non-linear interactions automatically, "
+                   "trains quickly on ~370 K rows, and provides built-in early "
+                   "stopping and feature-importance reporting."],
+                  ["8. Stratified 5-fold cross-validation",
+                   "Both models are evaluated by stratified 5-fold CV. "
+                   "Reason: stratification preserves the 1:1 positive/negative "
+                   "ratio in every fold; 5 folds balance variance of the CV "
+                   "estimate against retraining cost. Test prediction differs "
+                   "between the two models: Model A averages predictions across "
+                   "the 5 fold-trained models, which acts as a small ensemble, "
+                   "while Model B uses CV only for evaluation and then refits "
+                   "a single classifier on the full training set to predict "
+                   "the test set."],
+                  ["9. Rank-space prediction blending",
+                   "Each model's probability vector is replaced by its percentile "
+                   "ranks before averaging. "
+                   "Reason: the two models output probabilities on very different "
+                   "scales (mean 0.111 vs. 0.409). Naive probability averaging "
+                   "would let the higher-mean model dominate regardless of the "
+                   "weight. Percentile ranks normalise both models to a uniform "
+                   "(0, 1] distribution, preserving only relative ordering — "
+                   "which is what ROC AUC measures."],
+              ],
+              col_widths_cm=[5.0, 11.0])
+    add_para(doc,
+             "Steps 1, 3, 4, 7, 8 are shared by both models. Step 2 (adjacency "
+             "caching) is Model A only. Steps 5–6 (SVD embeddings, global node "
+             "scores) are Model B only. Step 9 combines the two models' "
+             "predictions into the final submission.")
+
+    doc.add_heading("2.2 Model A — Hand-Crafted Graph Features", level=2)
     add_para(doc,
              "For each candidate pair (u, v), a 19-dimensional feature vector is computed "
              "from the directed graph G and its undirected projection. The features fall "
@@ -188,7 +282,7 @@ def main():
                "Cross-validation: stratified 5-fold; final test predictions are "
                "the per-fold average.")
 
-    doc.add_heading("2.2 Model B — Graph Features and SVD Embeddings", level=2)
+    doc.add_heading("2.3 Model B — Graph Features and SVD Embeddings", level=2)
     add_para(doc,
              "Model B adds two layers of richness on top of Model A's design.")
     add_para(doc,
@@ -220,7 +314,7 @@ def main():
              "with n_estimators = 1000, learning_rate = 0.03, num_leaves = 255. "
              "Stratified 5-fold cross-validation.")
 
-    doc.add_heading("2.3 Final Ensemble — Rank-Space Blending", level=2)
+    doc.add_heading("2.4 Final Ensemble — Rank-Space Blending", level=2)
     add_para(doc,
              "The two models exhibit very different probability calibrations:")
     add_table(doc,

@@ -2,9 +2,10 @@
 Link prediction — directed social graph.
 
 Approach B: graph features (27) + SVD embeddings (k=256), random negatives, LGBM.
-Achieved 0.9994 ROC AUC (3-fold CV).
+Synced with main_1.py: adjacency caching, capped negative sampling, and
+fold-averaged test predictions.
 
-Usage:  uv run python main.py
+Usage:  uv run python main_2.py
 """
 
 import sys
@@ -18,7 +19,8 @@ import networkx as nx
 import scipy.sparse as sp
 from scipy.sparse.linalg import svds
 from lightgbm import LGBMClassifier
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -56,18 +58,36 @@ def build_global_scores(G: nx.DiGraph) -> tuple[dict, dict, dict, dict]:
     return pagerank, hubs, authorities, node_community
 
 
+def build_adjacency_cache(G: nx.DiGraph) -> dict:
+    """Pre-compute neighbour sets and degrees for O(1) lookup during feature extraction."""
+    return {
+        "out_nbrs": {n: set(G.successors(n))   for n in G.nodes()},
+        "in_nbrs":  {n: set(G.predecessors(n)) for n in G.nodes()},
+        "out_deg":  dict(G.out_degree()),
+        "in_deg":   dict(G.in_degree()),
+        "edge_set": set(G.edges()),
+    }
+
+
 def compute_graph_features(
     pairs: list[tuple[int, int]],
-    G: nx.DiGraph,
+    cache: dict,
     pagerank: dict, hubs: dict, authorities: dict, node_community: dict,
     desc: str = "graph features",
 ) -> pd.DataFrame:
+    out_nbrs = cache["out_nbrs"]
+    in_nbrs  = cache["in_nbrs"]
+    out_deg  = cache["out_deg"]
+    in_deg   = cache["in_deg"]
+    edge_set = cache["edge_set"]
+    empty    = set()
+
     rows = []
     for u, v in tqdm(pairs, desc=desc, miniters=2000):
-        out_u = set(G.successors(u)) if G.has_node(u) else set()
-        in_u  = set(G.predecessors(u)) if G.has_node(u) else set()
-        out_v = set(G.successors(v)) if G.has_node(v) else set()
-        in_v  = set(G.predecessors(v)) if G.has_node(v) else set()
+        out_u = out_nbrs.get(u, empty)
+        in_u  = in_nbrs.get(u,  empty)
+        out_v = out_nbrs.get(v, empty)
+        in_v  = in_nbrs.get(v,  empty)
 
         out_in      = out_u & in_v
         in_out      = in_u & out_v
@@ -79,17 +99,17 @@ def compute_graph_features(
 
         aa = ra = 0.0
         for w in out_in:
-            deg = G.out_degree(w) + G.in_degree(w)
+            deg = out_deg.get(w, 0) + in_deg.get(w, 0)
             if deg > 1:
                 aa += 1.0 / math.log(deg)
-            out_w = G.out_degree(w)
+            out_w = out_deg.get(w, 0)
             if out_w > 0:
                 ra += 1.0 / out_w
 
-        u_out = G.out_degree(u) if G.has_node(u) else 0
-        u_in  = G.in_degree(u)  if G.has_node(u) else 0
-        v_out = G.out_degree(v) if G.has_node(v) else 0
-        v_in  = G.in_degree(v)  if G.has_node(v) else 0
+        u_out = out_deg.get(u, 0)
+        u_in  = in_deg.get(u,  0)
+        v_out = out_deg.get(v, 0)
+        v_in  = in_deg.get(v,  0)
         u_total = u_out + u_in
         v_total = v_out + v_in
 
@@ -103,7 +123,7 @@ def compute_graph_features(
 
         rows.append([
             len(out_in), len(in_out), len(common_succ), len(common_pred),
-            jaccard, aa, ra, triadic, int(G.has_edge(v, u)), common_all,
+            jaccard, aa, ra, triadic, int((v, u) in edge_set), common_all,
             u_out, u_in, v_out, v_in, u_total, v_total,
             u_out * v_in, u_total * v_total, u_follow_rat, v_follow_rat,
             pagerank.get(u, 0.0), pagerank.get(v, 0.0),
@@ -182,14 +202,19 @@ def compute_svd_features(
 # ── sampling ──────────────────────────────────────────────────────────────────
 
 def sample_random_negatives(G: nx.DiGraph, n: int, seed: int = 42) -> list[tuple]:
+    """Random non-edges. Capped at 20× attempts to avoid pathological infinite loops."""
     nodes    = list(G.nodes())
     edge_set = set(G.edges())
     rng      = random.Random(seed)
     negs: list[tuple] = []
-    while len(negs) < n:
-        u, v = rng.choice(nodes), rng.choice(nodes)
+    attempts = 0
+    max_attempts = n * 20
+    while len(negs) < n and attempts < max_attempts:
+        u = rng.choice(nodes)
+        v = rng.choice(nodes)
         if u != v and (u, v) not in edge_set:
             negs.append((u, v))
+        attempts += 1
     return negs
 
 
@@ -224,6 +249,9 @@ def main() -> None:
     print(f"Graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     print(f"Test pairs: {len(test_df)}")
 
+    print("\n=== Building adjacency cache ===")
+    cache = build_adjacency_cache(G)
+
     print("\n=== Pre-computing global scores ===")
     pagerank, hubs, authorities, node_community = build_global_scores(G)
 
@@ -235,34 +263,46 @@ def main() -> None:
     pairs    = pos_pairs + neg_rand
     y        = np.array([1] * len(pos_pairs) + [0] * len(neg_rand), dtype=np.int8)
 
-    print("\n=== Building features ===")
+    print("\n=== Building train features ===")
     X_graph = compute_graph_features(
-        pairs, G, pagerank, hubs, authorities, node_community, desc="train graph"
+        pairs, cache, pagerank, hubs, authorities, node_community, desc="train graph"
     )
     X_svd  = compute_svd_features(pairs, src_emb, dst_emb, zero_vec)
     X_train = pd.concat([X_graph, X_svd], axis=1)
 
-    print("\n=== Cross-validating ===")
-    skf    = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    scores = cross_val_score(make_lgbm(), X_train, y, cv=skf, scoring="roc_auc", n_jobs=-1)
-    print(f"   CV AUC: {scores.mean():.4f} +/- {scores.std():.4f}")
-
     print("\n=== Building test features ===")
     X_test_graph = compute_graph_features(
-        test_pairs, G, pagerank, hubs, authorities, node_community, desc="test graph"
+        test_pairs, cache, pagerank, hubs, authorities, node_community, desc="test graph"
     )
     X_test_svd = compute_svd_features(test_pairs, src_emb, dst_emb, zero_vec)
     X_test     = pd.concat([X_test_graph, X_test_svd], axis=1)
 
-    print("\n=== Training final model ===")
-    clf = make_lgbm()
-    clf.fit(X_train, y)
-    probs = clf.predict_proba(X_test)[:, 1]
+    print("\n=== Training with 5-fold CV (fold-averaged predictions) ===")
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    oof_preds  = np.zeros(len(X_train))
+    test_preds = np.zeros(len(X_test))
 
-    submission = pd.DataFrame({"ID": test_df["ID"], "Label": probs})
-    submission.to_csv("submission.csv", index=False)
-    print(f"Saved submission.csv  ({len(submission)} rows)")
-    print(submission.head())
+    for fold, (tr_idx, val_idx) in enumerate(skf.split(X_train, y)):
+        X_tr, X_val = X_train.iloc[tr_idx], X_train.iloc[val_idx]
+        y_tr, y_val = y[tr_idx], y[val_idx]
+
+        model = make_lgbm()
+        model.fit(X_tr, y_tr)
+        oof_preds[val_idx] = model.predict_proba(X_val)[:, 1]
+        test_preds         += model.predict_proba(X_test)[:, 1] / skf.n_splits
+
+        auc = roc_auc_score(y_val, oof_preds[val_idx])
+        print(f"  Fold {fold+1}/5  AUC = {auc:.5f}")
+
+    overall_auc = roc_auc_score(y, oof_preds)
+    print(f"\n  OOF AUC: {overall_auc:.5f}")
+
+    print("\n=== Saving submission ===")
+    sub_df = pd.read_csv("sample_submission.csv")
+    sub_df["Label"] = test_preds
+    sub_df.to_csv("submission.csv", index=False)
+    print(f"Saved submission.csv  ({len(sub_df)} rows)")
+    print(sub_df.head())
 
 
 if __name__ == "__main__":
