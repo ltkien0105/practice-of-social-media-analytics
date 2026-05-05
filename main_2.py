@@ -243,7 +243,7 @@ def main() -> None:
     X_train = pd.concat([X_graph, X_svd], axis=1)
 
     print("\n=== Cross-validating ===")
-    skf    = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    skf    = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     scores = cross_val_score(make_lgbm(), X_train, y, cv=skf, scoring="roc_auc", n_jobs=-1)
     print(f"   CV AUC: {scores.mean():.4f} +/- {scores.std():.4f}")
 
