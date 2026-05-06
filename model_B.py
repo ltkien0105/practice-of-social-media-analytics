@@ -137,7 +137,7 @@ def compute_graph_features(
 # ── SVD embeddings ────────────────────────────────────────────────────────────
 
 def build_svd_embeddings(
-    G: nx.DiGraph, k: int = 256,
+    G: nx.DiGraph, k: int = 256, seed: int = 42
 ) -> tuple[dict[int, np.ndarray], dict[int, np.ndarray], np.ndarray]:
     nodes = sorted(G.nodes())
     node2idx = {n: i for i, n in enumerate(nodes)}
@@ -300,8 +300,8 @@ def main() -> None:
     print("\n=== Saving submission ===")
     sub_df = pd.read_csv("sample_submission.csv")
     sub_df["Label"] = test_preds
-    sub_df.to_csv("submission.csv", index=False)
-    print(f"Saved submission.csv  ({len(sub_df)} rows)")
+    sub_df.to_csv("M11415803_Le_Trung_Kien_B.csv", index=False)
+    print(f"Saved M11415803_Le_Trung_Kien_B.csv  ({len(sub_df)} rows)")
     print(sub_df.head())
 
 
