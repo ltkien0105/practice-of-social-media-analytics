@@ -166,7 +166,7 @@ print(f"\n  OOF AUC: {overall_auc:.5f}")
 # ── Save submission ───────────────────────────────────────────────────────────
 print("\n=== Saving submission ===")
 sub_df["Label"] = test_preds
-out_path = "submission.csv"
+out_path = "M11415803_Le_Trung_Kien_A.csv"
 sub_df.to_csv(out_path, index=False)
 print(f"Saved → {out_path}")
 print(sub_df.head(10))
