@@ -35,13 +35,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "lightgbm" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "tqdm" },
+    { name = "lightgbm", specifier = ">=4.6.0" },
+    { name = "networkx", specifier = ">=3.6.1" },
+    { name = "numpy", specifier = ">=2.4.4" },
+    { name = "pandas", specifier = ">=3.0.2" },
+    { name = "scikit-learn", specifier = ">=1.8.0" },
+    { name = "scipy", specifier = ">=1.17.1" },
+    { name = "tqdm", specifier = ">=4.67.3" },
 ]
 
 [[package]]

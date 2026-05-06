@@ -1,10 +1,22 @@
-import pandas as pd
+from scipy.stats import rankdata, spearmanr
 import numpy as np
-new = pd.read_csv('submission.csv')
-old = pd.read_csv('M11415803_Le_Trung_Kien_sonnet5fold.csv')
-print(f'Shapes:  new={new.shape}  old={old.shape}')
-print(f'Columns: new={list(new.columns)}  old={list(old.columns)}')
-print(f'IDs match: {(new["ID"].values == old["ID"].values).all()}')
-diff = np.abs(new['Label'].values - old['Label'].values)
-print(f'Label diff:  max={diff.max():.3e}  mean={diff.mean():.3e}')
-print(f'Byte-identical: {diff.max() == 0}')
+
+def test_rankdata():
+    x1 = [0.1, 0.5, 0.3, 0.2]
+    x2 = [0.2, 0.7, 0.4, 0.3]
+    print(rankdata(x1))
+    print(rankdata(x2))
+    r1 = rankdata(x1) / len(x1)
+    r2 = rankdata(x2) / len(x2)
+    print("Ranks for x1:", r1)
+    print("Ranks for x2:", r2)
+    print(0.8 * r1)
+    print(0.2 * r2)
+    print(0.2 * r1 + 0.8 * r2)
+    # disagree = np.abs(r1 - r2) > 0.5
+    # print(disagree)
+    # print(f"Strong disagreements (rank diff > 0.5): {disagree.sum()} / {len(x1)} ({disagree.mean()*100:.1f}%)")
+    # # assert (r1 == [1, 4, 3, 2]).all(), f"Expected ranks [1,4,3,2], got {r1}"
+    # # assert (r2 == [2, 3, 1, 4]).all(), f"Expected ranks [2,3,1,4], got {r2}"
+
+test_rankdata()
