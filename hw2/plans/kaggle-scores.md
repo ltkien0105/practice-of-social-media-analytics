@@ -46,6 +46,18 @@ Top-1 target: **0.96200**
 | submission_tuned_top478.csv | 478 | — | Tuned top-N by prob, N=478 (estimated true count) |
 | submission_tuned_top490.csv | 490 | — | Tuned top-N by prob, N=490 |
 | submission_tuned_top500.csv | 500 | — | Tuned top-N by prob, N=500 |
+| submission_tuned_t0.5.csv | 447 | 0.92000 | Tuned 8-seed ensemble, thr=0.5 |
+| submission_tuned_top478.csv | 478 | **0.93200** | Tuned ensemble, top-478 by prob — new best |
+| submission_hidden_t0.3.csv | 629 | — | Hidden-edge classifier, thr=0.3 (broad) |
+| submission_hidden_t0.4.csv | 463 | — | Hidden-edge classifier, thr=0.4 |
+| submission_hidden_t0.5.csv | 461 | — | Hidden-edge classifier, thr=0.5 |
+| submission_hidden_t0.6.csv | 460 | — | Hidden-edge classifier, thr=0.6 |
+| submission_hidden_t0.7.csv | 459 | — | Hidden-edge classifier, thr=0.7 |
+| submission_hidden_top448.csv | 448 | — | Hidden-edge top-N, N=448 |
+| submission_hidden_top478.csv | 478 | — | Hidden-edge top-N, N=478 (estimated true count) |
+| submission_hidden_top500.csv | 500 | — | Hidden-edge top-N, N=500 |
+| submission_hidden_top520.csv | 520 | — | Hidden-edge top-N, N=520 |
+| submission_hidden_top540.csv | 540 | — | Hidden-edge top-N, N=540 |
 
 ## Methods Notes
 
@@ -56,6 +68,7 @@ Top-1 target: **0.96200**
 - **Classifier (baseline)**: `classifier_pipeline.py` — sklearn GB + LR, 7 features (cn, jaccard, AA, log-PA, same-Leiden, same-Louvain, same-component); labels = edges vs cross-Leiden same-comp
 - **Enhanced classifier**: `enhanced_classifier.py` — adds 6 features (RA, shortest-path BFS cap=4, Louvain consensus 10 runs, Leiden consensus 5 res, log-deg-u, log-deg-v); 3 models (sklearn-GB, XGBoost, LightGBM); labels = edges + same-Leiden non-edges vs cross-Leiden non-edges. **Overshoots — same-Leiden non-edges as positives is a wrong assumption.**
 - **Tuned classifier**: `classifier_tuned.py` — same 7 features + labels as `classifier_pipeline.py`, but ENSEMBLE of 8 seeds (averaged probs) + threshold sweep + count-target submissions. Probability stats: median=0.081 (negatives), bimodal distribution.
+- **Hidden-edge classifier**: `classifier_hidden_edge.py` — 12 features (adds RA, shortest_path BFS cap=4, Louvain consensus over 8 runs, log_deg_u, log_deg_v). Same labels as classifier_pipeline BUT half of positive edge samples have features computed with the (u,v) edge HIDDEN — so sp varies in positive training samples (avoids trivial label leak). 6-seed ensemble. Feature importance: lou_cons=0.83 (dominant), sp=0.13, log_pa=0.015, same_leid=0.015.
 
 ## To Try Next (if scores below disappoint)
 - Probability calibration / finer threshold sweep
