@@ -67,6 +67,14 @@ Top-1 target: **0.96200**
 | submission_ens_t7h3_top460.csv | 460 | — | Ensemble 0.7×tuned + 0.3×hidden, top-460 |
 | submission_ens_t3h7_t0.5.csv | 460 | — | Ensemble 30/70, thr=0.5 |
 | submission_ens_t5h5_t0.5.csv | 456 | — | Ensemble 50/50, thr=0.5 |
+| submission_ens_t3h7_top460.csv | 460 | **0.94800** | Ensemble 0.3×tuned + 0.7×hidden, top-460 — new best |
+| submission_ens_t5h5_top460.csv | 460 | 0.94600 | Ensemble 50/50 — no better than hidden alone |
+| submission_fine_t20h80_top460.csv | 460 | — | Fine grid 0.20/0.80 |
+| submission_fine_t25h75_top460.csv | 460 | — | Fine grid 0.25/0.75 |
+| submission_fine_t35h65_top460.csv | 460 | — | Fine grid 0.35/0.65 |
+| submission_rankavg_top460.csv | 460 | — | Borda rank-average of tuned & hidden |
+| submission_geomean_top460.csv | 460 | — | Geometric mean of probabilities |
+| submission_max_top460.csv | 460 | — | Per-pair max(tuned, hidden) |
 
 ## Methods Notes
 
