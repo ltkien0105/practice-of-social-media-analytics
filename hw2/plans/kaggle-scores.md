@@ -58,6 +58,15 @@ Top-1 target: **0.96200**
 | submission_hidden_top500.csv | 500 | — | Hidden-edge top-N, N=500 |
 | submission_hidden_top520.csv | 520 | — | Hidden-edge top-N, N=520 |
 | submission_hidden_top540.csv | 540 | — | Hidden-edge top-N, N=540 |
+| submission_hidden_top478.csv | 478 | 0.93200 | Hidden-edge top-N=478 |
+| submission_hidden_top500.csv | 500 | 0.93200 | Hidden-edge top-N=500 |
+| submission_hidden_t0.5.csv | 461 | **0.94600** | Hidden-edge thr=0.5 — current best |
+| submission_ens_t3h7_top460.csv | 460 | — | Ensemble 0.3×tuned + 0.7×hidden, top-460 |
+| submission_ens_t5h5_top460.csv | 460 | — | Ensemble 0.5×tuned + 0.5×hidden, top-460 |
+| submission_ens_t5h5_top465.csv | 465 | — | Ensemble 50/50, top-465 |
+| submission_ens_t7h3_top460.csv | 460 | — | Ensemble 0.7×tuned + 0.3×hidden, top-460 |
+| submission_ens_t3h7_t0.5.csv | 460 | — | Ensemble 30/70, thr=0.5 |
+| submission_ens_t5h5_t0.5.csv | 456 | — | Ensemble 50/50, thr=0.5 |
 
 ## Methods Notes
 
@@ -68,7 +77,8 @@ Top-1 target: **0.96200**
 - **Classifier (baseline)**: `classifier_pipeline.py` — sklearn GB + LR, 7 features (cn, jaccard, AA, log-PA, same-Leiden, same-Louvain, same-component); labels = edges vs cross-Leiden same-comp
 - **Enhanced classifier**: `enhanced_classifier.py` — adds 6 features (RA, shortest-path BFS cap=4, Louvain consensus 10 runs, Leiden consensus 5 res, log-deg-u, log-deg-v); 3 models (sklearn-GB, XGBoost, LightGBM); labels = edges + same-Leiden non-edges vs cross-Leiden non-edges. **Overshoots — same-Leiden non-edges as positives is a wrong assumption.**
 - **Tuned classifier**: `classifier_tuned.py` — same 7 features + labels as `classifier_pipeline.py`, but ENSEMBLE of 8 seeds (averaged probs) + threshold sweep + count-target submissions. Probability stats: median=0.081 (negatives), bimodal distribution.
-- **Hidden-edge classifier**: `classifier_hidden_edge.py` — 12 features (adds RA, shortest_path BFS cap=4, Louvain consensus over 8 runs, log_deg_u, log_deg_v). Same labels as classifier_pipeline BUT half of positive edge samples have features computed with the (u,v) edge HIDDEN — so sp varies in positive training samples (avoids trivial label leak). 6-seed ensemble. Feature importance: lou_cons=0.83 (dominant), sp=0.13, log_pa=0.015, same_leid=0.015.
+- **Hidden-edge classifier**: `classifier_hidden_edge.py` — 12 features (adds RA, shortest_path BFS cap=4, Louvain consensus over 8 runs, log_deg_u, log_deg_v). Same labels as classifier_pipeline BUT half of positive edge samples have features computed with the (u,v) edge HIDDEN — so sp varies in positive training samples (avoids trivial label leak). 6-seed ensemble. Feature importance: lou_cons=0.83 (dominant), sp=0.13, log_pa=0.015, same_leid=0.015. Optimal threshold=0.5 (461 positives) due to mass of pairs tied at prob=0.352 (unknown-region default).
+- **Ensemble**: `ensemble_probs.py` — weighted average of tuned + hidden probability vectors. Rank correlation 0.81; top-500 disagreement is 42 pairs. Weights w_tuned/w_hidden in {0.0/1.0, 0.3/0.7, 0.5/0.5, 0.7/0.3, 1.0/0.0}.
 
 ## To Try Next (if scores below disappoint)
 - Probability calibration / finer threshold sweep
