@@ -82,7 +82,26 @@ Top-1 target: **0.96200**
 | submission_walktrap_top460.csv | 460 | — | Walktrap top-460 |
 | submission_3rankavg_top460.csv | 460 | — | 3-way Borda rank-avg (tuned+hidden+walk) |
 | submission_3w_t25h45w30_top460.csv | 460 | — | 3-way blend, weighted toward hidden |
-| submission_3w_t30h50w20_top460.csv | 460 | — | 3-way blend, more tuned |
+| submission_3w_t30h50w20_top460.csv | 460 | 0.94800 | 3-way blend, more tuned (tied best) |
+| submission_3rankavg_top460.csv | 460 | 0.94800 | Borda over 3 (tied best) |
+| submission_walktrap_t0.5.csv | 461 | 0.94600 | Walktrap alone (= hidden) |
+| submission_holdout_t0.5.csv | 668 | — | Holdout classifier — overshoots |
+| submission_holdout_top460.csv | 460 | — | Holdout top-460 |
+| submission_holdblend_ho30_top460.csv | 460 | 0.94600 | 4-way blend (tuned 0.2, hidden 0.5, holdout 0.3) — no gain |
+| submission_holdblend_ho40_top460.csv | 460 | — | 4-way blend, more holdout (0.4) |
+| submission_holdblend_ho30b_top460.csv | 460 | 0.94400 | Less tuned, more holdout — slight drop |
+| submission_4rank_top460.csv | 460 | 0.92200 | Rank-avg of all 4 — holdout's bad ranking drags it down |
+
+## Summary
+
+**Best achievable**: `submission_ens_t3h7_top460.csv` → **0.94800** (0.3×tuned_probs + 0.7×hidden_edge_probs, top-460 by averaged probability).
+
+**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through.
+
+To reach 0.96+ likely needs:
+- Node2Vec/DeepWalk embeddings (blocked: gensim doesn't build on Python 3.14)
+- Graph neural network (e.g., GCN on PyG) — significant additional engineering
+- A genuinely different label source than train.csv edges
 
 ## Methods Notes
 
