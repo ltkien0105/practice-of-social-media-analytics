@@ -75,6 +75,14 @@ Top-1 target: **0.96200**
 | submission_rankavg_top460.csv | 460 | — | Borda rank-average of tuned & hidden |
 | submission_geomean_top460.csv | 460 | — | Geometric mean of probabilities |
 | submission_max_top460.csv | 460 | — | Per-pair max(tuned, hidden) |
+| submission_fine_t25h75_top460.csv | 460 | 0.94600 | Fine 0.25/0.75 |
+| submission_fine_t35h65_top460.csv | 460 | 0.94800 | Fine 0.35/0.65 (tied best) |
+| submission_rankavg_top460.csv | 460 | 0.94600 | Borda rank-avg |
+| submission_walktrap_t0.5.csv | 461 | — | Walktrap-augmented hidden-edge classifier |
+| submission_walktrap_top460.csv | 460 | — | Walktrap top-460 |
+| submission_3rankavg_top460.csv | 460 | — | 3-way Borda rank-avg (tuned+hidden+walk) |
+| submission_3w_t25h45w30_top460.csv | 460 | — | 3-way blend, weighted toward hidden |
+| submission_3w_t30h50w20_top460.csv | 460 | — | 3-way blend, more tuned |
 
 ## Methods Notes
 
