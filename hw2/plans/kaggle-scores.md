@@ -91,15 +91,19 @@ Top-1 target: **0.96200**
 | submission_holdblend_ho40_top460.csv | 460 | — | 4-way blend, more holdout (0.4) |
 | submission_holdblend_ho30b_top460.csv | 460 | 0.94400 | Less tuned, more holdout — slight drop |
 | submission_4rank_top460.csv | 460 | 0.92200 | Rank-avg of all 4 — holdout's bad ranking drags it down |
+| submission_n2v_cos_top460.csv | 460 | 0.94600 | Node2Vec DeepWalk (dim=128, walks=10×80) cosine similarity, top-460 |
+| submission_n2v_clf_top460.csv | 460 | 0.66800 | Node2Vec hadamard product + GBM classifier — catastrophic, embedding products lose community signal |
+| submission_blend_n2v20_top460.csv | 460 | 0.94800 | Baseline + 20% n2v_clf — same as baseline (one neutral flip) |
+| submission_blend_n2v30_top460.csv | 460 | 0.94400 | Baseline + 30% n2v_clf — bad signal pulls down |
 
 ## Summary
 
 **Best achievable**: `submission_ens_t3h7_top460.csv` → **0.94800** (0.3×tuned_probs + 0.7×hidden_edge_probs, top-460 by averaged probability).
 
-**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through.
+**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through. Node2Vec cosine alone hits 0.946 (very close to baseline) — embeddings have signal but cannot exceed the structural-feature ensemble.
 
 To reach 0.96+ likely needs:
-- Node2Vec/DeepWalk embeddings (blocked: gensim doesn't build on Python 3.14)
+- Biased Node2Vec walks (p=1, q=0.5) for stronger community sampling — pending
 - Graph neural network (e.g., GCN on PyG) — significant additional engineering
 - A genuinely different label source than train.csv edges
 
@@ -114,6 +118,7 @@ To reach 0.96+ likely needs:
 - **Tuned classifier**: `classifier_tuned.py` — same 7 features + labels as `classifier_pipeline.py`, but ENSEMBLE of 8 seeds (averaged probs) + threshold sweep + count-target submissions. Probability stats: median=0.081 (negatives), bimodal distribution.
 - **Hidden-edge classifier**: `classifier_hidden_edge.py` — 12 features (adds RA, shortest_path BFS cap=4, Louvain consensus over 8 runs, log_deg_u, log_deg_v). Same labels as classifier_pipeline BUT half of positive edge samples have features computed with the (u,v) edge HIDDEN — so sp varies in positive training samples (avoids trivial label leak). 6-seed ensemble. Feature importance: lou_cons=0.83 (dominant), sp=0.13, log_pa=0.015, same_leid=0.015. Optimal threshold=0.5 (461 positives) due to mass of pairs tied at prob=0.352 (unknown-region default).
 - **Ensemble**: `ensemble_probs.py` — weighted average of tuned + hidden probability vectors. Rank correlation 0.81; top-500 disagreement is 42 pairs. Weights w_tuned/w_hidden in {0.0/1.0, 0.3/0.7, 0.5/0.5, 0.7/0.3, 1.0/0.0}.
+- **Node2Vec**: `node2vec-experiment.py` — DeepWalk-style walks (10 per node, length 80, p=q=1), Word2Vec SGNS (dim=128, window=10, neg=10, 5 epochs, 8 workers, 49 min train time). Two predictors: pure cosine similarity of normalized embeddings (0.946); hadamard product + 6-seed GBM ensemble on edges-vs-cross-Leiden labels (0.668 — catastrophic). Cosine top-460 overlaps 437/460 with the 0.948 baseline.
 
 ## To Try Next (if scores below disappoint)
 - Probability calibration / finer threshold sweep

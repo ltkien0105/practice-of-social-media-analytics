@@ -409,13 +409,15 @@ def main() -> None:
     t0 = time.time()
     tuned_probs = train_tuned(g, edges, leiden_of, louvain_of, comp_of,
                               test_pairs)
-    print(f"  tuned done ({time.time() - t0:.1f}s)")
+    np.save(ROOT / "tuned_probs.npy", tuned_probs)
+    print(f"  tuned done ({time.time() - t0:.1f}s) -> tuned_probs.npy")
 
     print("\nTraining hidden-edge ensemble (6 seeds, 12 features)...")
     t0 = time.time()
     hidden_probs = train_hidden(g, edges, leiden_of, louvain_of,
                                 louvain_parts, comp_of, test_pairs)
-    print(f"  hidden-edge done ({time.time() - t0:.1f}s)")
+    np.save(ROOT / "hidden_probs.npy", hidden_probs)
+    print(f"  hidden-edge done ({time.time() - t0:.1f}s) -> hidden_probs.npy")
 
     print(f"\nBlending {WEIGHT_TUNED} * tuned + {WEIGHT_HIDDEN} * hidden, "
           f"top-{TOP_N} by averaged probability...")
