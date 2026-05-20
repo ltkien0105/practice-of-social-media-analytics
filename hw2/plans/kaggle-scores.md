@@ -98,12 +98,13 @@ Top-1 target: **0.96200**
 | submission_blend_cos15_top460.csv | 460 | 0.94600 | Baseline + 15% n2v cosine — 2 flips both wrong direction |
 | submission_rankblend_cos30_top460.csv | 460 | 0.94600 | Rank-avg baseline+cosine 0.7/0.3 — 4 flips net −1 |
 | submission_rankblend_cos50_top460.csv | 460 | 0.94600 | Rank-avg baseline+cosine 0.5/0.5 — 6 flips net −1 |
+| submission_rankblend_n2vq50cos50_top460.csv | 460 | 0.94800 | Biased Node2Vec (p=1, q=0.5) rank-blend 0.5/0.5 — 7 flips, net 0 (tied baseline) |
 
 ## Summary
 
 **Best achievable**: `submission_ens_t3h7_top460.csv` → **0.94800** (0.3×tuned_probs + 0.7×hidden_edge_probs, top-460 by averaged probability).
 
-**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through. Node2Vec cosine alone hits 0.946 (very close to baseline) — embeddings have signal but cannot exceed the structural-feature ensemble. Blending baseline + n2v cosine at every weight (5% → 50%, linear or rank-based) consistently regresses to 0.946 — every disagreement between the two signals resolves in favor of the baseline, so adding the cosine vote always introduces net error.
+**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through. Node2Vec cosine alone hits 0.946 (very close to baseline) — embeddings have signal but cannot exceed the structural-feature ensemble. Blending baseline + unbiased n2v cosine at every weight (5% → 50%, linear or rank-based) consistently regresses to 0.946 — every disagreement between the two signals resolves in favor of the baseline, so adding the cosine vote always introduces net error. Biased Node2Vec (p=1, q=0.5, DFS-bias for community sampling) closes the gap: biased rank-blend 0.5/0.5 ties the baseline at 0.948 (7 flips, net zero), confirming the embeddings are now well-calibrated to community structure — but the ceiling holds.
 
 To reach 0.96+ likely needs:
 - Biased Node2Vec walks (p=1, q=0.5) for stronger community sampling — pending

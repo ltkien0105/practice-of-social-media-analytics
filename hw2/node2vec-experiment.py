@@ -34,8 +34,6 @@ from sklearn.ensemble import GradientBoostingClassifier
 ROOT = Path(__file__).parent
 TRAIN_CSV = ROOT / "train.csv"
 TEST_CSV = ROOT / "test.csv"
-EMB_PATH = ROOT / "n2v_embeddings.npy"
-NODE_INDEX_PATH = ROOT / "n2v_node_index.pkl"
 
 SEED = 42
 EMB_DIM = 128
@@ -45,6 +43,17 @@ WINDOW = 10
 EPOCHS = 5
 WORKERS = 8
 MIN_COUNT = 0
+
+# Node2Vec biased-walk parameters.
+# p=1, q=1   -> DeepWalk (uniform). Run already cached at 0.946 cosine.
+# p=1, q=0.5 -> DFS-bias (homophily / community-aware). This run.
+P = 1.0
+Q = 0.5
+
+SUFFIX = f"_p{P}_q{Q}".replace(".", "")
+EMB_PATH = ROOT / f"n2v_embeddings{SUFFIX}.npy"
+NODE_INDEX_PATH = ROOT / f"n2v_node_index{SUFFIX}.pkl"
+TAG = f"n2vq{int(Q * 100):02d}"  # used in submission filenames
 
 
 def load_edges() -> list[tuple[int, int]]:
@@ -96,6 +105,45 @@ def deepwalk_walks(adj: dict[int, list[int]], nodes: list[int],
     return walks
 
 
+def biased_walks(adj: dict[int, list[int]],
+                 nbr_set: dict[int, set[int]],
+                 nodes: list[int], n_walks: int, walk_len: int,
+                 p: float, q: float, seed: int) -> list[list[str]]:
+    """Node2Vec biased walks. weight = 1/p if x==prev, 1 if x in N(prev), 1/q else."""
+    rng = random.Random(seed)
+    w_return = 1.0 / p
+    w_dfs = 1.0 / q
+    walks: list[list[str]] = []
+    for it in range(n_walks):
+        t0 = time.time()
+        order = nodes[:]
+        rng.shuffle(order)
+        for start in order:
+            walk = [start]
+            prev = None
+            cur = start
+            for _ in range(walk_len - 1):
+                nbrs = adj.get(cur)
+                if not nbrs:
+                    break
+                if prev is None:
+                    nxt = nbrs[rng.randint(0, len(nbrs) - 1)]
+                else:
+                    pn = nbr_set[prev]
+                    weights = [
+                        w_return if x == prev
+                        else 1.0 if x in pn
+                        else w_dfs
+                        for x in nbrs
+                    ]
+                    nxt = rng.choices(nbrs, weights=weights, k=1)[0]
+                walk.append(nxt)
+                prev, cur = cur, nxt
+            walks.append([str(n) for n in walk])
+        print(f"  walk batch {it + 1}/{n_walks} ({time.time() - t0:.1f}s)")
+    return walks
+
+
 def train_embeddings(edges: list[tuple[int, int]]) -> tuple[np.ndarray, dict[int, int]]:
     """Train Node2Vec and return (embedding matrix, node->row index)."""
     if EMB_PATH.exists() and NODE_INDEX_PATH.exists():
@@ -113,11 +161,17 @@ def train_embeddings(edges: list[tuple[int, int]]) -> tuple[np.ndarray, dict[int
         adj.setdefault(v, []).append(u)
         nodes_set.add(u); nodes_set.add(v)
     nodes = sorted(nodes_set)
+    nbr_set: dict[int, set[int]] = {n: set(a) for n, a in adj.items()}
     print(f"  nodes={len(nodes)} edges={len(edges)}")
 
-    print(f"Generating {N_WALKS} x {len(nodes)} walks of length {WALK_LEN}...")
+    biased = (P != 1.0 or Q != 1.0)
+    print(f"Generating {N_WALKS} x {len(nodes)} walks of length {WALK_LEN} "
+          f"({'biased p=' + str(P) + ' q=' + str(Q) if biased else 'uniform'})...")
     t0 = time.time()
-    walks = deepwalk_walks(adj, nodes, N_WALKS, WALK_LEN, SEED)
+    if biased:
+        walks = biased_walks(adj, nbr_set, nodes, N_WALKS, WALK_LEN, P, Q, SEED)
+    else:
+        walks = deepwalk_walks(adj, nodes, N_WALKS, WALK_LEN, SEED)
     print(f"  {len(walks)} walks generated ({time.time() - t0:.1f}s)")
 
     print(f"Training Word2Vec (dim={EMB_DIM}, window={WINDOW}, "
@@ -289,39 +343,48 @@ def main() -> None:
     print(f"  sim stats: min={sims.min():.3f} max={sims.max():.3f} "
           f"mean={sims.mean():.3f}")
     for top in (440, 460, 480, 500):
-        topn_submission(sims, test_pairs, top, f"submission_n2v_cos_top{top}.csv")
+        topn_submission(sims, test_pairs, top,
+                        f"submission_{TAG}_cos_top{top}.csv")
     for th in (0.5, 0.6, 0.7):
-        thresh_submission(sims, test_pairs, th, f"submission_n2v_cos_t{th}.csv")
+        thresh_submission(sims, test_pairs, th,
+                          f"submission_{TAG}_cos_t{th}.csv")
 
     print("\nHadamard + GBM classifier ensemble...")
     n2v_probs = train_hadamard_classifier(emb, idx, edges, leiden_of,
                                           comp_of, test_pairs, n_ensemble=6)
-    np.save(ROOT / "n2v_probs.npy", n2v_probs)
+    np.save(ROOT / f"{TAG}_probs.npy", n2v_probs)
     print(f"  probs stats: min={n2v_probs.min():.3f} "
           f"max={n2v_probs.max():.3f} mean={n2v_probs.mean():.3f}")
     for top in (440, 460, 480, 500):
         topn_submission(n2v_probs, test_pairs, top,
-                        f"submission_n2v_clf_top{top}.csv")
+                        f"submission_{TAG}_clf_top{top}.csv")
     for th in (0.5, 0.6):
         thresh_submission(n2v_probs, test_pairs, th,
-                          f"submission_n2v_clf_t{th}.csv")
+                          f"submission_{TAG}_clf_t{th}.csv")
 
     tuned_path = ROOT / "tuned_probs.npy"
     hidden_path = ROOT / "hidden_probs.npy"
     if tuned_path.exists() and hidden_path.exists():
-        print("\nBlending with baseline probs (tuned + hidden + n2v)...")
+        print("\nBlending baseline + biased-n2v cosine at multiple weights...")
         tuned = np.load(tuned_path)
         hidden = np.load(hidden_path)
         base = 0.3 * tuned + 0.7 * hidden
-        for w_n2v in (0.1, 0.2, 0.3):
-            ens = (1 - w_n2v) * base + w_n2v * n2v_probs
+        rank_base = np.argsort(np.argsort(base)).astype(float) / (len(base) - 1)
+        rank_cos = np.argsort(np.argsort(sims)).astype(float) / (len(sims) - 1)
+        for w in (0.10, 0.20, 0.30, 0.50):
+            ens = (1 - w) * base + w * sims
             topn_submission(
                 ens, test_pairs, 460,
-                f"submission_blend_n2v{int(w_n2v * 100)}_top460.csv",
+                f"submission_blend_{TAG}cos{int(w * 100):02d}_top460.csv",
+            )
+        for w in (0.30, 0.50):
+            ens = (1 - w) * rank_base + w * rank_cos
+            topn_submission(
+                ens, test_pairs, 460,
+                f"submission_rankblend_{TAG}cos{int(w * 100):02d}_top460.csv",
             )
     else:
-        print("\nSkip blend; run main.py to cache "
-              "tuned_probs.npy + hidden_probs.npy then re-run.")
+        print("\nSkip blend; run main.py to cache baseline probs first.")
 
     print(f"\nTotal runtime: {time.time() - t_total:.1f}s")
 
