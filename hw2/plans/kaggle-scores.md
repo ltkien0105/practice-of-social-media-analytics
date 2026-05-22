@@ -99,12 +99,26 @@ Top-1 target: **0.96200**
 | submission_rankblend_cos30_top460.csv | 460 | 0.94600 | Rank-avg baseline+cosine 0.7/0.3 — 4 flips net −1 |
 | submission_rankblend_cos50_top460.csv | 460 | 0.94600 | Rank-avg baseline+cosine 0.5/0.5 — 6 flips net −1 |
 | submission_rankblend_n2vq50cos50_top460.csv | 460 | 0.94800 | Biased Node2Vec (p=1, q=0.5) rank-blend 0.5/0.5 — 7 flips, net 0 (tied baseline) |
+| submission_rankblend_speck50_top460.csv | 460 | 0.91800 | Spectral k=64 rank-blend 0.5/0.5 — embeddings too coarse |
+| submission_rankblend_speck30_top460.csv | 460 | 0.94200 | Spectral k=64 rank-blend 0.3/0.7 |
+| submission_speck64_cos_top460.csv | 460 | 0.77200 | Spectral k=64 cosine alone — much worse than structural |
+| submission_speck256_cos_top460.csv | 460 | 0.80200 | Spectral k=256 cosine alone — still worse |
+| submission_rankblend_speck256cos50_top460.csv | 460 | 0.93400 | Spec k=256 rank-blend 0.5/0.5 |
+| submission_ext_t3h7_top460.csv | 460 | 0.94400 | Hidden classifier + n2v_cos & spec_cos features — n2v_cos overfit (importance=0.998) |
+| **submission_ppr_top460.csv** | **460** | **0.95600** | **Personalized PageRank α=0.85, sym(ppr_uv,ppr_vu), top-460 — BREAKTHROUGH (+0.008 over plateau)** |
+| submission_rankblend_pprcos30_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.3 — dilution hurts |
+| submission_rankblend_pprcos50_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.5 — dilution hurts |
 
 ## Summary
 
 **Best achievable**: `submission_ens_t3h7_top460.csv` → **0.94800** (0.3×tuned_probs + 0.7×hidden_edge_probs, top-460 by averaged probability).
 
-**Plateau confirmed at 0.948**. Held-out edge training degenerated (sp dominated, saturated probabilities). Walktrap features unused (lou_cons dominates). Linear/rank/geometric ensemble of correlated models can't break through. Node2Vec cosine alone hits 0.946 (very close to baseline) — embeddings have signal but cannot exceed the structural-feature ensemble. Blending baseline + unbiased n2v cosine at every weight (5% → 50%, linear or rank-based) consistently regresses to 0.946 — every disagreement between the two signals resolves in favor of the baseline, so adding the cosine vote always introduces net error. Biased Node2Vec (p=1, q=0.5, DFS-bias for community sampling) closes the gap: biased rank-blend 0.5/0.5 ties the baseline at 0.948 (7 flips, net zero), confirming the embeddings are now well-calibrated to community structure — but the ceiling holds.
+**Best:** `submission_ppr_top460.csv` → **0.956** via Personalized PageRank. Symmetric PPR(u→v, v→u) with α=0.85, 20 power iterations, top-460 by mean score. **First plateau break: +0.008 over the 0.948 structural ensemble.**
+
+**Plateau history:**
+- 0.948 (structural ensemble) confirmed across Walktrap, holdout, fine-grid, Node2Vec (uniform + biased q=0.5), Spectral (k=64 + k=256), and classifier extensions — all bounce off.
+- PPR works because it captures multi-hop community membership the local-feature ensemble misses: correlation with baseline is 0.50 (much lower than n2v 0.86 or spec 0.71), yet its top-460 still overlaps 447/460 with baseline. Decorrelated but accurate — the unicorn combo.
+- Blends of PPR + baseline regress (0.948), confirming PPR alone is stronger than the baseline at the top-460 boundary.
 
 To reach 0.96+ likely needs:
 - Biased Node2Vec walks (p=1, q=0.5) for stronger community sampling — pending
