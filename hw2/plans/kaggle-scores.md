@@ -112,7 +112,7 @@ Top-1 target: **0.96400** — TIED by PPR top-474.
 | submission_ppr_sym_top470.csv | 470 | 0.96200 | PPR sym top-470 — ties old leaderboard #1 |
 | submission_ppr_std_top480.csv | 480 | 0.95600 | PPR top-480 — past the peak |
 | submission_ppr_std_top485.csv | 485 | 0.94800 | PPR top-485 — precision below 50% |
-| **M11415803_Le_Trung_Kien.csv** | **474** | **0.96400** | **PPR top-474 — BEST, TIES leaderboard #1. main.py produces this.** |
+| **submission_ppr_std_top474.csv** | **474** | **0.96400** | **PPR top-474 — BEST, TIES leaderboard #1. main.py produces this; uploaded to Kaggle as M11415803_Le_Trung_Kien.csv.** |
 
 ### PPR top-N sweep (the key tuning axis)
 
@@ -134,10 +134,10 @@ Sharp single peak at **474**. Two findings from the sweep:
 
 ## Summary
 
-**Best:** `M11415803_Le_Trung_Kien.csv` → **0.96400** via Personalized PageRank, top-474. Symmetric PPR(u→v, v→u), α=0.85, 20 power iterations, cut at top-474. **Ties leaderboard #1.** `main.py` produces this.
+**Best:** `submission_ppr_std_top474.csv` → **0.96400** via Personalized PageRank, top-474. Symmetric PPR(u→v, v→u), α=0.85, 20 power iterations, cut at top-474. **Ties leaderboard #1.** `main.py` produces this; uploaded to Kaggle as `M11415803_Le_Trung_Kien.csv`.
 
 **Two final picks (diversity hedge):**
-- PPR top-474 → 0.964 (multi-hop community reach)
+- PPR top-474 `submission_ppr_std_top474.csv` → 0.964 (multi-hop community reach)
 - Structural ensemble `submission_ensemble_top460.csv` → 0.948 (local features)
 - Correlation 0.50 between them — independent bets against a public/private shake-up.
 
