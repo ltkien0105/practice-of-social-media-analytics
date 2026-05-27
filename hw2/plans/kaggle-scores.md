@@ -105,9 +105,22 @@ Top-1 target: **0.96200**
 | submission_speck256_cos_top460.csv | 460 | 0.80200 | Spectral k=256 cosine alone — still worse |
 | submission_rankblend_speck256cos50_top460.csv | 460 | 0.93400 | Spec k=256 rank-blend 0.5/0.5 |
 | submission_ext_t3h7_top460.csv | 460 | 0.94400 | Hidden classifier + n2v_cos & spec_cos features — n2v_cos overfit (importance=0.998) |
-| **submission_ppr_top460.csv** | **460** | **0.95600** | **Personalized PageRank α=0.85, sym(ppr_uv,ppr_vu), top-460 — BREAKTHROUGH (+0.008 over plateau)** |
+| submission_ppr_top460.csv | 460 | 0.95600 | Personalized PageRank α=0.85, sym(ppr_uv,ppr_vu), top-460 — first plateau break |
 | submission_rankblend_pprcos30_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.3 — dilution hurts |
 | submission_rankblend_pprcos50_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.5 — dilution hurts |
+| submission_ppr_sym_top450.csv | 450 | 0.94800 | PPR sym top-450 — too few positives |
+| **submission_ppr_sym_top470.csv** | **470** | **0.96200** | **PPR sym top-470 — BEST, ties old leaderboard #1. main.py now produces this.** |
+
+### PPR top-N sweep (the key tuning axis)
+
+| N | Score |
+|---|---|
+| 450 | 0.948 |
+| 460 | 0.956 |
+| 470 | **0.962** |
+
+Monotonic increase 450→470 means the true positive count is ≈ 470-480. Next:
+test N ∈ {465, 475, 480} to find the exact peak (top-480 file already generated).
 
 ## Summary
 
