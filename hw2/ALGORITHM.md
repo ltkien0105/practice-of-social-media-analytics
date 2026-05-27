@@ -84,17 +84,20 @@ structural ensemble, so blending never helped — each disagreement resolved
 in the baseline's favour. PPR was the first signal *independent enough* to
 add real information.
 
-## Files
+## Files (final 2 approaches kept)
 
 | File | Purpose |
 |---|---|
-| `main.py` | Final PPR pipeline → `M11415803_Le_Trung_Kien.csv` (0.962) |
-| `ppr-experiment.py` | First PPR run + caches `ppr_scores.npy` |
-| `ppr-tune.py` | top-N sweep + aggregation variants (sym/max/min/geom) |
-| `node2vec-experiment.py` | Node2Vec embeddings (uniform + biased walks) |
-| `spectral-experiment.py` | Spectral embeddings via scipy `eigsh` |
-| `hidden-extended.py` | Classifier with embedding-cosine features |
-| `plans/kaggle-scores.md` | Full per-submission score log |
+| `main.py` | **Primary** — PPR pipeline → `M11415803_Le_Trung_Kien.csv` (0.962) |
+| `submission_ensemble_top460.csv` | Secondary submission — structural ensemble (0.948) |
+| `ensemble.py` | **Secondary** — structural-feature GB ensemble → `submission_ensemble_top460.csv` (0.948) |
+| `plans/kaggle-scores.md` | Full per-submission score log (all approaches tried) |
+
+Two final Kaggle picks chosen for diversity: PPR (0.962, multi-hop reach)
+and the structural ensemble (0.948, local features) — uncorrelated methods,
+hedging against a public/private leaderboard shake-up. All exploratory
+scripts (Node2Vec, spectral, blends, PPR tuning) were removed after their
+findings were folded into this summary; they remain in git history.
 
 ## Next ideas to push past 0.962 (leaderboard #1 is 0.964)
 
