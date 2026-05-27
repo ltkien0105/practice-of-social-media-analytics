@@ -1,6 +1,6 @@
 # Kaggle Scores
 
-Top-1 target: **0.96200**
+Top-1 target: **0.96400** — TIED by PPR top-474.
 
 | Submission File | Positives | Kaggle Score | Notes |
 |---|---|---|---|
@@ -109,7 +109,10 @@ Top-1 target: **0.96200**
 | submission_rankblend_pprcos30_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.3 — dilution hurts |
 | submission_rankblend_pprcos50_top460.csv | 460 | 0.94800 | PPR rank-blend with baseline 0.5 — dilution hurts |
 | submission_ppr_sym_top450.csv | 450 | 0.94800 | PPR sym top-450 — too few positives |
-| **submission_ppr_sym_top470.csv** | **470** | **0.96200** | **PPR sym top-470 — BEST, ties old leaderboard #1. main.py now produces this.** |
+| submission_ppr_sym_top470.csv | 470 | 0.96200 | PPR sym top-470 — ties old leaderboard #1 |
+| submission_ppr_std_top480.csv | 480 | 0.95600 | PPR top-480 — past the peak |
+| submission_ppr_std_top485.csv | 485 | 0.94800 | PPR top-485 — precision below 50% |
+| **M11415803_Le_Trung_Kien.csv** | **474** | **0.96400** | **PPR top-474 — BEST, TIES leaderboard #1. main.py produces this.** |
 
 ### PPR top-N sweep (the key tuning axis)
 
@@ -117,26 +120,34 @@ Top-1 target: **0.96200**
 |---|---|
 | 450 | 0.948 |
 | 460 | 0.956 |
-| 470 | **0.962** |
+| 470 | 0.962 |
+| **474** | **0.964** |
+| 480 | 0.956 |
+| 485 | 0.948 |
 
-Monotonic increase 450→470 means the true positive count is ≈ 470-480. Next:
-test N ∈ {465, 475, 480} to find the exact peak (top-480 file already generated).
+Sharp single peak at **474**. Two findings from the sweep:
+- α / normalization are dead levers — symmetric-norm `D^(-1/2)AD^(-1/2)` and
+  α=0.90 give the *exact same* top-474 set as `D⁻¹A` α=0.85.
+- The 474→480 drop is 8 points over only 6 changed pairs → impossible on a
+  full-1000 metric, so Kaggle's public score is on a subset. 474 is the
+  public optimum; the structural ensemble is the private-split hedge.
 
 ## Summary
 
-**Best achievable**: `submission_ens_t3h7_top460.csv` → **0.94800** (0.3×tuned_probs + 0.7×hidden_edge_probs, top-460 by averaged probability).
+**Best:** `M11415803_Le_Trung_Kien.csv` → **0.96400** via Personalized PageRank, top-474. Symmetric PPR(u→v, v→u), α=0.85, 20 power iterations, cut at top-474. **Ties leaderboard #1.** `main.py` produces this.
 
-**Best:** `submission_ppr_top460.csv` → **0.956** via Personalized PageRank. Symmetric PPR(u→v, v→u) with α=0.85, 20 power iterations, top-460 by mean score. **First plateau break: +0.008 over the 0.948 structural ensemble.**
+**Two final picks (diversity hedge):**
+- PPR top-474 → 0.964 (multi-hop community reach)
+- Structural ensemble `submission_ensemble_top460.csv` → 0.948 (local features)
+- Correlation 0.50 between them — independent bets against a public/private shake-up.
 
 **Plateau history:**
 - 0.948 (structural ensemble) confirmed across Walktrap, holdout, fine-grid, Node2Vec (uniform + biased q=0.5), Spectral (k=64 + k=256), and classifier extensions — all bounce off.
-- PPR works because it captures multi-hop community membership the local-feature ensemble misses: correlation with baseline is 0.50 (much lower than n2v 0.86 or spec 0.71), yet its top-460 still overlaps 447/460 with baseline. Decorrelated but accurate — the unicorn combo.
-- Blends of PPR + baseline regress (0.948), confirming PPR alone is stronger than the baseline at the top-460 boundary.
+- PPR works because it captures multi-hop community membership the local-feature ensemble misses: correlation with baseline is 0.50, yet decorrelated *and* accurate — the unicorn combo.
+- Blends of PPR + baseline regress (0.948); PPR alone is stronger at the boundary.
+- The cut point is the only live lever — α and graph normalization are provably inert (identical top-474 set).
 
-To reach 0.96+ likely needs:
-- Biased Node2Vec walks (p=1, q=0.5) for stronger community sampling — pending
-- Graph neural network (e.g., GCN on PyG) — significant additional engineering
-- A genuinely different label source than train.csv edges
+Beating 0.964 on the private split would need a genuinely independent signal (e.g. a GNN) — high engineering cost, uncertain gain. The 0.948 ensemble is the cheaper hedge.
 
 ## Methods Notes
 

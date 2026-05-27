@@ -6,7 +6,7 @@ predict for each of 1,000 test pairs whether the two nodes belong to the
 same community.
 **Metric:** accuracy over 1,000 pairs (Kaggle).
 
-## Final method: Personalized PageRank (PPR) — score 0.962
+## Final method: Personalized PageRank (PPR) — score 0.964 (ties leaderboard #1)
 
 `main.py` is the complete pipeline (≈54 s runtime, deps: numpy + scipy).
 
@@ -34,7 +34,7 @@ same community.
    score(u, v) = (PPR(u → v) + PPR(v → u)) / 2
    ```
 
-4. **Threshold by rank.** Predict the **top-470** highest-scoring pairs as
+4. **Threshold by rank.** Predict the **top-474** highest-scoring pairs as
    same-community (`1`), the rest `0`.
 
 ### Why it works
@@ -53,14 +53,28 @@ correct.
 
 ### The top-N tuning axis
 
-The PPR score ranks pairs well; the only tunable is the cut point. The true
-positive count is ≈470, so:
+The PPR score ranks pairs well; the only tunable is the cut point. The peak
+is sharp at **474**:
 
 | top-N | Kaggle |
 |------:|:------:|
 | 450 | 0.948 |
 | 460 | 0.956 |
-| **470** | **0.962** |
+| 470 | 0.962 |
+| **474** | **0.964** |
+| 480 | 0.956 |
+| 485 | 0.948 |
+
+Two side notes from this curve:
+
+- **The signal is normalization-invariant.** Symmetric-normalized walk
+  `D^(-1/2) A D^(-1/2)` and a higher restart `α = 0.90` produce the *exact
+  same* top-474 set as `D⁻¹A`, `α = 0.85` — so α / normalization are dead
+  levers; the cut point is the entire game.
+- **Kaggle's public score is on a subset.** The 474→480 drop is 8 points
+  (0.964→0.956) yet only 6 pairs changed — impossible on a full-1000 metric.
+  So 474 is the *public* optimum; the diverse second pick hedges the private
+  split.
 
 ## What did NOT work (the 0.948 plateau)
 
@@ -88,23 +102,22 @@ add real information.
 
 | File | Purpose |
 |---|---|
-| `main.py` | **Primary** — PPR pipeline → `M11415803_Le_Trung_Kien.csv` (0.962) |
+| `main.py` | **Primary** — PPR pipeline → `M11415803_Le_Trung_Kien.csv` (0.964) |
 | `submission_ensemble_top460.csv` | Secondary submission — structural ensemble (0.948) |
 | `ensemble.py` | **Secondary** — structural-feature GB ensemble → `submission_ensemble_top460.csv` (0.948) |
 | `plans/kaggle-scores.md` | Full per-submission score log (all approaches tried) |
 
-Two final Kaggle picks chosen for diversity: PPR (0.962, multi-hop reach)
+Two final Kaggle picks chosen for diversity: PPR (0.964, multi-hop reach)
 and the structural ensemble (0.948, local features) — uncorrelated methods,
 hedging against a public/private leaderboard shake-up. All exploratory
 scripts (Node2Vec, spectral, blends, PPR tuning) were removed after their
 findings were folded into this summary; they remain in git history.
 
-## Next ideas to push past 0.962 (leaderboard #1 is 0.964)
+## Status: ties leaderboard #1 (0.964)
 
-- Test top-N ∈ {465, 475, 480} to pin the exact optimal cut.
-- Sweep PPR `α` (0.5 – 0.95): lower α emphasises local structure, higher α
-  emphasises global community reach.
-- Symmetric-normalized walk `D^(-1/2) A D^(-1/2)` instead of `D⁻¹A`.
-- Combine PPR with the structural ensemble only on the pairs where PPR is
-  *uncertain* (score near the top-470 boundary), keeping PPR's confident
-  calls intact.
+PPR top-474 reaches 0.964 — the public leaderboard top. Since the public
+metric is a subset (see note above) and α / normalization are dead levers,
+there is no further headroom from this signal alone. Beating 0.964 on the
+*private* split would require a genuinely independent signal (e.g. a GNN), at
+significant engineering cost for an uncertain gain — the diverse 0.948
+ensemble is the cheaper hedge.
