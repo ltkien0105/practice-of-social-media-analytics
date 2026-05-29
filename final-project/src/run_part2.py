@@ -10,7 +10,7 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless: no display needed
 
-from src.data_loader import PROJECT_ROOT, load_features, load_graph_cached
+from src.data_loader import PROJECT_ROOT, load_features, load_graph_cached, set_seed
 from src.part2_community.community_profiling import profile_communities
 from src.part2_community.louvain_detection import detect_communities
 from src.part2_community.nmi_evaluation import evaluate_nmi
@@ -26,6 +26,7 @@ def main() -> None:
     TABLE_DIR.mkdir(parents=True, exist_ok=True)
     REPORT.parent.mkdir(parents=True, exist_ok=True)
 
+    set_seed(42)  # reproducible Louvain detection, stability runs, and null model
     features = load_features()
     graph = load_graph_cached()
 

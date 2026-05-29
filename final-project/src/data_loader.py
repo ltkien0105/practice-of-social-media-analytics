@@ -10,6 +10,7 @@ aligns row-for-row with igraph vertex indices. ``build_graph`` asserts this.
 from __future__ import annotations
 
 import pickle
+import random
 from pathlib import Path
 
 import igraph as ig
@@ -26,6 +27,18 @@ GRAPH_CACHE = CACHE_DIR / "graph.pkl"
 
 EXPECTED_NODES = 168_114
 EXPECTED_TRANSITIVITY = 0.0184  # README checkpoint
+
+
+def set_seed(seed: int = 42) -> None:
+    """Make igraph's randomised algorithms reproducible.
+
+    Louvain visits vertices in a randomised order, so the community count and
+    exact modularity Q drift run-to-run. Routing igraph through Python's RNG and
+    seeding it once makes the whole Part 2 pipeline (detection, stability runs,
+    and the configuration-model null) identical across runs and machines.
+    """
+    ig.set_random_number_generator(random)
+    random.seed(seed)
 
 
 def load_features() -> pd.DataFrame:
