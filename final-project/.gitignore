@@ -1,0 +1,7 @@
+results/cache/
+__pycache__/
+*.pyc
+.venv/
+
+# Large dataset edge list (83MB) — download per README; features CSV is kept
+twitch_gamers/large_twitch_edges.csv
